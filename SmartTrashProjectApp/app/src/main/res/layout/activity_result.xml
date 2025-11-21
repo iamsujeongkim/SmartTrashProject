@@ -1,0 +1,50 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/imageViewResult"
+        android:layout_width="300dp"
+        android:layout_height="400dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="사진 미리보기"/>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnRetake"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="재촬영"
+            android:textSize="17dp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            style="@android:style/Widget.Button"
+            android:stateListAnimator="@null"
+            android:backgroundTint="@null"
+            android:background="@drawable/rounded_dark_button"/>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnConfirm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="확인"
+            android:textSize="17dp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            style="@android:style/Widget.Button"
+            android:stateListAnimator="@null"
+            android:backgroundTint="@null"
+            android:layout_marginStart="20dp"
+            android:background="@drawable/rounded_dark_button"/>
+    </LinearLayout>
+</LinearLayout>

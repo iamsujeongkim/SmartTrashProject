@@ -1,0 +1,30 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp"
+    android:gravity="center"
+    android:descendantFocusability="blocksDescendants"
+    android:clickable="false"
+    android:focusable="false">
+    <ImageView
+        android:id="@+id/imageIcon"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:scaleType="fitCenter"
+        android:clickable="false"
+        android:focusable="false"/>
+    <TextView
+        android:id="@+id/textLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="카테고리"
+        android:textSize="16sp"
+        android:textColor="#000"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:layout_marginTop="8dp"
+        android:clickable="false"
+        android:focusable="false"/>
+</LinearLayout>
