@@ -1,0 +1,82 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #d0d7f3 0%, #d3cade 100%);
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+
+h1 {
+  text-align: center;
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 50px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#bin-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.bin-card {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #667eea;
+}
+
+.bin-card h3 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.bin-card p {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.bin-card p strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.bin-card.ok {
+  border-left-color: #10b981;
+}
+
+.bin-card.full {
+  border-left-color: #ef4444;
+}
+
+.bin-card.full h3 {
+  color: #dc2626;
+}
+
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+  }
+
+  #bin-list {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .bin-card {
+    padding: 20px;
+  }
+}

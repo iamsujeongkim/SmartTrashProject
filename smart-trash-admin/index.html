@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 대시보드</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #8ab18e 0%, #b9e4c4 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      font-size: 2.5rem;
+      margin-bottom: 50px;
+      text-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      letter-spacing: 1px;
+      animation: slideDown 0.8s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #bin-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .bin-card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .bin-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    }
+
+    .bin-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #62ca5e, #59bd95);
+    }
+
+    .bin-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #333;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+
+    .bin-card p {
+      font-size: 1rem;
+      margin-bottom: 15px;
+      color: #555;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bin-card p strong {
+      color: #333;
+      font-weight: 600;
+    }
+
+    .bin-card.ok {
+      border-left: 5px solid #10b981;
+    }
+
+    .bin-card.ok::before {
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    .bin-card.full {
+      border-left: 5px solid #ef4444;
+    }
+
+    .bin-card.full::before {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    .bin-card.full h3 {
+      color: #dc2626;
+    }
+
+      /*✅ EMPTY 상태용 스타일 */
+    .bin-card.empty {
+      border-left: 5px solid #9ca3af; 
+    }
+
+    .bin-card.empty::before {
+      background: linear-gradient(90deg, #d1d5db, #9ca3af); 
+    }
+
+    .bin-card.empty h3 {
+      color: #6b7280; 
+    }
+
+    .bin-card.empty .progress-fill {
+      background: linear-gradient(90deg, #d1d5db, #9ca3af); 
+    }
+
+    .bin-card.empty .status-badge {
+      background: #e5e7eb;
+      color: #4b5563;
+    }
+
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 15px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 0.5s ease-out;
+      border-radius: 10px;
+    }
+
+    .bin-card.full .progress-fill {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    .bin-card.ok .progress-fill {
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 10px;
+    }
+
+    .bin-card.ok .status-badge {
+      background: #d1fae5;
+      color: #047857;
+    }
+
+    .bin-card.full .status-badge {
+      background: #fee2e2;
+      color: #991b1b;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+      }
+    }
+
+    .level-display {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .bin-card.full .level-display {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 30px;
+      }
+
+      #bin-list {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .bin-card {
+        padding: 20px;
+      }
+
+      .bin-card h3 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+  <script type="module" src="app.js" defer></script>
+</head>
+<body>
+  <h1>쓰레기통 상태 모니터링</h1>
+  <div id="bin-list"></div>
+</body>
+</html>
