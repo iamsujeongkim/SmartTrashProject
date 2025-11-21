@@ -75,7 +75,11 @@ SmartTrashProject/
 
 ---
 
+## 시연 영상(Demo Video)
+아래 링크에서 프로젝트 시연 영상을 확인할 수 있습니다.
+> https://youtu.be/GLAArqQgUN8?si=n9vWY6plOMkdy48S
 
+---
 
 ## 팀원
 - 최지우 — 하드웨어/회로
