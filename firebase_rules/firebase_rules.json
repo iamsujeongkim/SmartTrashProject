@@ -1,0 +1,96 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.isBoolean()"
+      }
+    },
+
+    "admin_presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['online','at']) && newData.child('online').isBoolean() && newData.child('at').isNumber()"
+      }
+    },
+
+    "healthcheck": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".validate": "newData.isString()"
+    },
+
+    "bins": {
+      ".read": true,
+
+      "$binId": {
+        ".read": true,
+
+        "distance_cm": {
+          ".read": true,
+          ".write": "(auth == null) || (auth != null && root.child('admins').child(auth.uid).val() == true)",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 300"
+        },
+
+        "status": {
+          ".read": true,
+          ".write": "auth != null",
+          ".validate": "newData.isString()"
+        },
+
+        "last": {
+          ".read": true,
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['status','at']) && newData.child('status').isString() && newData.child('at').isNumber()"
+        },
+
+        "history": {
+          "$ts": {
+            ".read": true,
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['at','status']) && newData.child('at').isNumber() && newData.child('status').isString() && (!newData.child('distance_cm').exists() || newData.child('distance_cm').isNumber()) && (!newData.child('level').exists() || newData.child('level').isNumber()) && (!newData.child('reason').exists() || newData.child('reason').isString())"
+          }
+        },
+
+        "cmd": {
+          "inbox": {
+            "$msgId": {
+              ".read": true,
+              ".write": "auth != null",
+              ".validate": "newData.hasChildren(['cmd','at']) && newData.child('cmd').isString() && newData.child('at').isNumber()"
+            }
+          },
+          "ack": {
+            "$msgId": {
+              ".read": true,
+              ".write": true,
+              ".validate": "newData.hasChildren(['ok','at']) && newData.child('ok').isBoolean() && newData.child('at').isNumber() && (!newData.child('detail').exists() || newData.child('detail').isString())"
+            }
+          }
+        }
+      }
+    },
+
+    "classify_sessions": {
+      "$sid": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "(!newData.child('at').exists() || newData.child('at').isNumber()) && (!newData.child('binId').exists() || newData.child('binId').isString()) && (!newData.child('matched').exists() || newData.child('matched').isBoolean())"
+      }
+    },
+
+    "RecycleCategories": {
+      ".read": "auth != null",
+      "$id": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() == true",
+        ".validate": "(!newData.child('category').exists() || newData.child('category').isString())"
+      }
+    }
+  }
+}
