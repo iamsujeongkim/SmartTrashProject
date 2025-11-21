@@ -38,40 +38,17 @@ IoT 센서(초음파), AI 이미지 분류, Firebase Realtime Database, 모바�
 
 ## 프로젝트 구조
 
+## 프로젝트 구조
+
 SmartTrashProject/
-│
-├── app/                         # Android 사용자 앱 (Kotlin)
-│   ├── src/
-│   ├── build.gradle
-│   └── ...                     
-│
-├── admin-web/                   # 관리자 웹 페이지 (HTML/CSS/JS)
-│   ├── index.html
-│   ├── script.js
-│   ├── style.css
-│   └── ...
-│
-├── hardware/                    # ESP32 하드웨어 코드
-│   ├── esp32_ultrasonic.ino
-│   ├── esp32_servo.ino
-│   └── ...
-│
-├── ai-model/                    # AI 이미지 분류 모델 관련 파일
-│   ├── tm_model/                # Teachable Machine 모델 파일
-│   ├── model_metadata.json
-│   └── ...
-│
-├── firebase/                    # Firebase Realtime Database 설정 & 보안 규칙
-│   ├── database_rules.json
-│   └── structure_example.json
-│
-├── docs/                        # 보고서 / 디자인 / 시연 사진 자료
-│   ├── app_screenshots/
-│   ├── web_screenshots/
-│   ├── hardware_images/
-│   └── system_diagram.png
-│
-└── README.md                    # 프로젝트 설명 문서
+├─ firebase_rules.json        # Firebase Realtime Database 보안 규칙
+├─ firmware_code.txt          # ESP32 펌웨어 (초음파 센서 + 서보모터 + Firebase 연동)
+├─ index.js                   # AI 분류 서버 (Node.js + TensorFlow.js + Firebase Admin)
+├─ index.html                 # 관리자 웹 대시보드 화면
+├─ app.js                     # 관리자 웹 로직 (Firebase 연동, 상태 표시)
+├─ style.css                  # 관리자 웹 스타일
+└─ SmartTrashProjectApp/      # Android 사용자 앱 전체 코드 (Kotlin)
+   └─ ...                     # 액티비티, 레이아웃 파일 등
 
 ---
 
