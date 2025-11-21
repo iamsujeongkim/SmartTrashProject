@@ -1,0 +1,247 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include <ESP32Servo.h>
+#include "time.h"
+
+// Mobizt Firebase helpers
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
+
+// ---------- Wi-Fi & Firebase ----------
+#define WIFI_SSID     "zichoi"
+#define WIFI_PASSWORD "jems1234"    // 핫스팟 사용
+#define API_KEY       "AIzaSyDJRWOXET6wEts3l4PHnIxLmLOqxBKZTb0"
+#define DATABASE_URL  "https://smarttrashproject-1a495-default-rtdb.firebaseio.com"
+
+#define BIN_ID "paper" // plastic, paper, glass 각 카데고리 별로 각각 업로드함
+
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+// ---------- 핀/상수 ----------
+const int SERVO_PIN = 13;
+const int TRIG_PIN  = 26;
+const int ECHO_PIN  = 27;
+
+const int LID_OPEN_DEG  = 90;
+const int LID_CLOSE_DEG = 0;
+
+const unsigned long READ_INTERVAL_MS = 20000;
+const unsigned long CMD_POLL_MS      = 2000;
+const unsigned long LID_AUTOCLOSE_MS = 10000;
+const unsigned long PULSE_TIMEOUT_US = 30000UL;
+
+const float FULL_THRESHOLD_CM   = 15.0;
+const float EMPTY_CENTER_CM     = 49.3;
+const float EMPTY_TOLERANCE_CM  = 2.0;
+const float MIN_CHANGE_CM       = 3.0;
+
+// ---------- 객체 ----------
+Servo lid;
+unsigned long lastReadMs    = 0;
+unsigned long lastCmdPollMs = 0;
+float  lastDistance = -1.0;
+String lastStatus   = "";
+
+// ---------- NTP 시간 ----------
+long getCurrentTimeMs() {
+  time_t nowTime = time(nullptr);
+  if (nowTime < 1000000000) return millis(); // 동기화 안 됨 → millis로 대체
+  return nowTime * 1000;
+}
+
+// ---------- 거리 측정 ----------
+float measureDistanceCm() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH, PULSE_TIMEOUT_US);
+  if (duration == 0) return -1.0;
+  return duration * 0.034 / 2.0;
+}
+
+// ---------- 상태 판별 ----------
+String statusFromDistance(float d) {
+  if (d < 0) return "ERROR";
+  if (fabs(d - EMPTY_CENTER_CM) <= EMPTY_TOLERANCE_CM) return "EMPTY";
+  if (d <= FULL_THRESHOLD_CM) return "FULL";
+  return "OK";
+}
+
+// ---------- 서보 ----------
+void lidOpen()  { lid.write(LID_OPEN_DEG); }
+void lidClose() { lid.write(LID_CLOSE_DEG); }
+
+// ---------- DB 업데이트 ----------
+void updateDbIfChanged(float d) {
+  if (d <= 0) return;
+
+  String curStatus = statusFromDistance(d);
+  bool distanceChanged = (lastDistance < 0) || (fabs(d - lastDistance) > MIN_CHANGE_CM);
+  bool statusChanged   = (lastStatus == "") || (curStatus != lastStatus);
+  String reason = "";
+
+  if (distanceChanged && !statusChanged) reason = "distance_change";
+  else if (statusChanged) reason = "status_change";
+  else return; // 변화 없음 → 업데이트 생략
+
+  String basePath = "/bins/" + String(BIN_ID);
+  long currentTime = getCurrentTimeMs();
+
+  // level 계산 (0~100%)
+  float level = 0.0;
+  if (d > 0) {
+    level = constrain(((EMPTY_CENTER_CM - d) / (EMPTY_CENTER_CM - FULL_THRESHOLD_CM)) * 100.0, 0.0, 100.0);
+  }
+
+  Serial.printf("📏 거리: %.2fcm | 상태: %s | level: %.1f%% | reason: %s\n", 
+                d, curStatus.c_str(), level, reason.c_str());
+
+  // (1) distance_cm & level
+  FirebaseJson distJson;
+  distJson.set("distance_cm", d);
+  distJson.set("level", level);
+  Firebase.RTDB.updateNode(&fbdo, basePath.c_str(), &distJson);
+
+  // (2) last
+  FirebaseJson lastJson;
+  lastJson.set("last/status", curStatus);
+  lastJson.set("last/at", currentTime);
+  Firebase.RTDB.updateNode(&fbdo, basePath.c_str(), &lastJson);
+
+  // (3) history
+  FirebaseJson hist;
+  hist.set("status", curStatus);
+  hist.set("at", currentTime);
+  hist.set("distance_cm", d);
+  hist.set("level", level);
+  hist.set("reason", reason);
+  Firebase.RTDB.pushJSON(&fbdo, (basePath + "/history").c_str(), &hist);
+
+  lastDistance = d;
+  lastStatus   = curStatus;
+}
+
+// ---------- 명령(cmd) 처리 ----------
+void processCommand(String cmdType, String keyPath) {
+  if (cmdType == "OPEN") {
+    Serial.println("🚪 [CMD] OPEN 명령 수신 → 뚜껑 열기");
+    lidOpen();
+    delay(LID_AUTOCLOSE_MS);
+    lidClose();
+    Serial.println("✅ [CMD] 자동 닫힘 완료");
+
+    // ack 기록
+    FirebaseJson ack;
+    ack.set("ok", true);
+    ack.set("at", getCurrentTimeMs());
+    ack.set("detail", "executed");
+    String ackPath = "/bins/" + String(BIN_ID) + "/cmd/ack/" + keyPath;
+    Firebase.RTDB.setJSON(&fbdo, ackPath.c_str(), &ack);
+
+    Firebase.RTDB.deleteNode(&fbdo, ("/bins/" + String(BIN_ID) + "/cmd/inbox/" + keyPath).c_str());
+    Serial.println("🗑️ [CMD] 명령 처리 완료 및 삭제");
+
+    // history에 수동 작동 로그 추가
+    FirebaseJson hist;
+    hist.set("status", "OPEN");
+    hist.set("at", getCurrentTimeMs());
+    hist.set("reason", "manual_open");
+    Firebase.RTDB.pushJSON(&fbdo, ("/bins/" + String(BIN_ID) + "/history").c_str(), &hist);
+  }
+  else if (cmdType == "CLOSE") {
+    Serial.println("🚪 [CMD] CLOSE 명령 수신 → 즉시 닫힘");
+    lidClose();
+  }
+}
+
+// ---------- 명령(cmd) 감시 ----------
+void pollCommandInbox() {
+  String inboxPath = "/bins/" + String(BIN_ID) + "/cmd/inbox";
+  if (!Firebase.RTDB.getJSON(&fbdo, inboxPath.c_str())) return;
+  if (fbdo.dataType() != "json") return;
+
+  FirebaseJson inbox = fbdo.jsonObject();
+  size_t n = inbox.iteratorBegin();
+
+  for (size_t i = 0; i < n; i++) {
+    String key, value; int typeOf;
+    inbox.iteratorGet(i, typeOf, key, value);
+
+    FirebaseJsonData node;
+    if (!inbox.get(node, key)) continue;
+    if (!node.success || node.type != "object") continue;
+
+    FirebaseJson cmdJson;
+    cmdJson.setJsonData(node.to<String>());
+
+    FirebaseJsonData cmdData;
+    String cmdType = "";
+
+    if (cmdJson.get(cmdData, "cmd") && cmdData.success)
+      cmdType = cmdData.stringValue;
+
+    if (cmdType.length() > 0)
+      processCommand(cmdType, key);
+  }
+  inbox.iteratorEnd();
+}
+
+// ---------- setup ----------
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("📡 Wi-Fi 연결 중");
+  while (WiFi.status() != WL_CONNECTED) { Serial.print("."); delay(500); }
+  Serial.println(" ✅ 연결됨!");
+
+  configTime(9 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.println("🕒 NTP 시간 동기화 중...");
+  delay(2000);
+
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  if (Firebase.signUp(&config, &auth, "", ""))
+    Serial.println("🔑 Firebase 익명 로그인 성공");
+  else
+    Serial.println("❌ Firebase 로그인 실패: " + fbdo.errorReason());
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  ESP32PWM::allocateTimer(0);
+  lid.setPeriodHertz(50);
+  lid.attach(SERVO_PIN, 500, 2400);
+  lidClose();
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  Serial.println("✅ Ready: 거리 감지 + 상태 보고 + CMD 감시 + reason 기록");
+}
+
+// ---------- loop ----------
+void loop() {
+  unsigned long now = millis();
+
+  if (now - lastReadMs >= READ_INTERVAL_MS) {
+    lastReadMs = now;
+    float d = measureDistanceCm();
+    updateDbIfChanged(d);
+  }
+
+  if (now - lastCmdPollMs >= CMD_POLL_MS) {
+    lastCmdPollMs = now;
+    pollCommandInbox();
+  }
+
+  if (Serial.available()) {
+    char ch = Serial.read();
+    if (ch == 'o') { lidOpen();  Serial.println("🔧 수동: 뚜껑 열림"); }
+    if (ch == 'x') { lidClose(); Serial.println("🔧 수동: 뚜껑 닫힘"); }
+  }
+}
